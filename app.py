@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS (Wersja Oryginalna) ---
+# --- CSS (Wersja Oryginalna + Dodatki) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
@@ -36,12 +36,11 @@ st.markdown("""
     .progress-bar-bg { background: var(--bg-color); height: 4px; border-radius: 2px; overflow: hidden; }
     .progress-bar-fill { height: 100%; transition: width 1s; background: var(--accent-cyan); }
     .scenario-header { background: linear-gradient(135deg, var(--panel-bg) 0%, var(--bg-color) 100%); border-left: 4px solid var(--accent-cyan); padding: 20px; margin-bottom: 20px; }
-    .log-item { font-family: var(--font-mono); font-size: 0.7rem; padding: 4px 0 4px 8px; border-left: 2px solid var(--border-color); margin-bottom: 8px; }
-    .bankrupt-panel { background: rgba(239, 68, 68, 0.1); border: 2px solid var(--accent-red); padding: 40px; text-align: center; border-radius: 10px; margin-top: 50px; }
+    .danger-zone { border: 1px solid var(--accent-red); padding: 15px; border-radius: 6px; margin-top: 20px; background: rgba(239, 68, 68, 0.05); }
     </style>
 """, unsafe_allow_html=True)
 
-# --- DATABASE: 6 SCENARIOS x 5 ROUNDS ---
+# --- SCENARIOS SETUP ---
 FIN_SCENARIOS = [
     {"name": "I: Atak Ransomware", "rounds": 5},
     {"name": "II: Insider Threat", "rounds": 5},
@@ -52,10 +51,10 @@ FIN_SCENARIOS = [
 ]
 
 def get_round_data(s_idx, r_num):
-    # Mapowanie poprawnych odpowiedzi (dla przykładu opcja nr 1 jest zawsze optymalna)
+    # Stabilna struktura danych dla rund
     return {
         "title": f"FAZA {r_num}: KRYZYS W TOKU",
-        "desc": f"Sytuacja w scenariuszu {FIN_SCENARIOS[s_idx]['name']} rozwija się dynamicznie.",
+        "desc": f"Sytuacja w scenariuszu {FIN_SCENARIOS[s_idx]['name']} rozwija się.",
         "questions": {
             "IT": {
                 "label": "CYBER-SECURITY", 
@@ -93,16 +92,15 @@ def get_round_data(s_idx, r_num):
 # --- ENGINE ---
 @st.cache_resource
 def get_engine():
-    return {"scenario_idx": 0, "round": 0, "teams": {}, "status": "ACTIVE"}
+    return {"scenario_idx": 0, "round": 0, "teams": {}, "status": "ACTIVE", "history_log": []}
 
 state = get_engine()
 
 def calculate_metrics(team_name):
     t, l, c, co = 100, 100, 100, 100
     team = state["teams"].get(team_name, {})
-    for s_idx in range(state["scenario_idx"] + 1):
-        scen_decisions = team.get("decisions", {}).get(s_idx, {})
-        for r_num, roles in scen_decisions.items():
+    for s_idx, scen_decs in team.get("decisions", {}).items():
+        for r_num, roles in scen_decs.items():
             data = get_round_data(s_idx, r_num)
             for role, choice in roles.items():
                 if choice in data["questions"][role]["options"]:
@@ -118,45 +116,43 @@ def login_view():
     _, col, _ = st.columns([1, 1.5, 1])
     with col:
         st.markdown("<div class='panel'>", unsafe_allow_html=True)
-        t_id = st.text_input("KRYPTONIM JEDNOSTKI:").upper()
-        if st.button("WEJDŹ DO SYSTEMU", use_container_width=True):
+        t_id = st.text_input("IDENTYFIKATOR ZESPOŁU:").upper()
+        if st.button("AUTORYZUJ DOSTĘP", use_container_width=True):
             if t_id:
                 if t_id not in state["teams"]:
                     state["teams"][t_id] = {"decisions": {}, "is_active": True, "ready": False, "last_scen": 0}
                 st.session_state["team_name"] = t_id
                 st.session_state["role"] = "team"
                 st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
-        with st.expander("🔐 ROOT ACCESS"):
-            pwd = st.text_input("Hasło:", type="password")
-            if st.button("ZALOGUJ JAKO ADMIN"):
-                if pwd == "admin":
+        with st.expander("🔐 ROOT CONTROL"):
+            if st.text_input("ROOT KEY:", type="password") == "admin":
+                if st.button("ZALOGUJ DO DOWÓDZTWA"):
                     st.session_state["role"] = "admin"
                     st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
 
 def admin_view():
-    st.markdown('<div class="command-header"><div class="brand-title">CyberBank // ROOT CONTROL</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="command-header"><div class="brand-title">CyberBank // ROOT COMMAND CENTER</div></div>', unsafe_allow_html=True)
     
-    # Górne podsumowanie
-    st.markdown(f"""
-        <div class='panel' style='margin-bottom:20px;'>
-            <span class='panel-label'>STATUS GLOBALNY</span>
-            <div style='display:flex; gap:40px;'>
-                <div>KAMPANIA: <b>{state['scenario_idx']+1} / 6</b></div>
-                <div>RUNDA: <b>{state['round']} / 5</b></div>
-                <div>AKTYWNE ZESPOŁY: <b>{len([t for t in state['teams'] if state['teams'][t]['is_active']])}</b></div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
-    c1, c2 = st.columns([1, 2.5])
-    
+    # --- TOP CONTROL BAR ---
+    c1, c2, c3 = st.columns([1, 1, 1])
     with c1:
+        st.markdown(f"<div class='panel'>SCENARIUSZ: <b>{state['scenario_idx']+1} / 6</b></div>", unsafe_allow_html=True)
+    with c2:
+        st.markdown(f"<div class='panel'>RUNDA: <b>{state['round']} / 5</b></div>", unsafe_allow_html=True)
+    with c3:
+        if st.button("🔄 SYNCHRONIZUJ STATUSY ZESPOŁÓW", use_container_width=True):
+            st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # --- MAIN ADMIN TABS ---
+    tab1, tab2, tab3 = st.tabs(["🎮 STEROWANIE RUNDĄ", "📊 MONITOR ZESPOŁÓW", "📜 PEŁNA HISTORIA ROZGRYWKI"])
+
+    with tab1:
         st.markdown("<div class='panel'>", unsafe_allow_html=True)
-        st.markdown("<span class='panel-label'>STEROWANIE SYMULACJĄ</span>", unsafe_allow_html=True)
-        
-        if st.button("⏩ NASTĘPNY ETAP (RUNDA/SCENARIUSZ)", use_container_width=True):
+        if st.button("⏩ AKTYWUJ NASTĘPNY ETAP", use_container_width=True):
             if state["round"] < 5:
                 state["round"] += 1
             else:
@@ -173,58 +169,62 @@ def admin_view():
             
             for t in state["teams"]: state["teams"][t]["ready"] = False
             st.rerun()
-            
-        if st.button("🔄 RESET CAŁKOWITY", use_container_width=True, type="secondary"):
-            state.update({"scenario_idx": 0, "round": 0, "teams": {}, "status": "ACTIVE"})
-            st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with c2:
+    with tab2:
         st.markdown("<div class='panel'>", unsafe_allow_html=True)
-        st.markdown("<span class='panel-label'>RANKING I STATUS DECYZJI</span>", unsafe_allow_html=True)
-        data = []
+        monitor_data = []
         for t, d in state["teams"].items():
             m = calculate_metrics(t)
-            data.append({
-                "JEDNOSTKA": t, "PUNKTY": sum(m), 
-                "STATUS": "✅ AKTYWNY" if d["is_active"] else "❌ BANKRUT",
-                "SCENARIUSZ": d["last_scen"] + (1 if d["is_active"] else 0),
-                "DECYZJA": "📥 WYSŁANA" if d["ready"] else "⏳ MYŚLI"
+            status_txt = "✅ GOTOWY" if d["ready"] else "⏳ MYŚLI"
+            if not d["is_active"]: status_txt = "💀 ELIMINACJA"
+            
+            monitor_data.append({
+                "ZESPÓŁ": t, "PUNKTY": sum(m), "STATUS": status_txt,
+                "ZAUFANIE": m[0], "PŁYNNOŚĆ": m[1], "KAPITAŁ": m[2], "ZGODNOŚĆ": m[3]
             })
-        if data: st.dataframe(pd.DataFrame(data).sort_values("PUNKTY", ascending=False), hide_index=True, use_container_width=True)
+        if monitor_data:
+            st.dataframe(pd.DataFrame(monitor_data).sort_values("PUNKTY", ascending=False), hide_index=True, use_container_width=True)
+        else:
+            st.info("Brak połączonych zespołów.")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # NOWA SEKCJA: Weryfikacja poprawności odpowiedzi w obecnej rundzie
-    if state["round"] > 0:
-        st.markdown("<br>", unsafe_allow_html=True)
+    with tab3:
         st.markdown("<div class='panel'>", unsafe_allow_html=True)
-        st.markdown(f"<span class='panel-label'>ANALIZA POPRAWNOŚCI DECYZJI (RUNDA {state['round']})</span>", unsafe_allow_html=True)
+        st.markdown("<span class='panel-label'>DANE ARCHIWALNE I BIEŻĄCE (Wszystkie Scenariusze)</span>", unsafe_allow_html=True)
         
-        rd = get_round_data(state["scenario_idx"], state["round"])
-        analysis_data = []
-        
+        full_history = []
+        # Przechodzimy przez wszystkie zespoły i wszystkie ich dotychczasowe decyzje
         for t_name, t_data in state["teams"].items():
-            if not t_data["is_active"]: continue
-            
-            # Pobierz decyzje dla bieżącego scenariusza i rundy
-            current_decs = t_data.get("decisions", {}).get(state["scenario_idx"], {}).get(state["round"], {})
-            
-            row = {"ZESPÓŁ": t_name}
-            for role in ["IT", "Ops", "Dir"]:
-                correct = rd["questions"][role]["correct_option"]
-                picked = current_decs.get(role, "BRAK")
-                
-                if picked == correct:
-                    row[rd["questions"][role]["label"]] = "✅ POPRAWNA"
-                else:
-                    row[rd["questions"][role]["label"]] = f"❌ ({picked})"
-            
-            analysis_data.append(row)
-            
-        if analysis_data:
-            st.table(pd.DataFrame(analysis_data))
+            for s_idx, scen_decs in t_data.get("decisions", {}).items():
+                for r_num, roles in scen_decs.items():
+                    rd = get_round_data(s_idx, r_num)
+                    for role, choice in roles.items():
+                        is_correct = "✅" if choice == rd["questions"][role]["correct_option"] else "❌"
+                        full_history.append({
+                            "SCENARIUSZ": s_idx + 1,
+                            "RUNDA": r_num,
+                            "ZESPÓŁ": t_name,
+                            "SEKCJA": rd["questions"][role]["label"],
+                            "DECYZJA": choice,
+                            "POPRAWNA": is_correct
+                        })
+        
+        if full_history:
+            df_hist = pd.DataFrame(full_history)
+            st.dataframe(df_hist.sort_values(["SCENARIUSZ", "RUNDA"], ascending=[False, False]), use_container_width=True, hide_index=True)
         else:
-            st.info("Oczekiwanie na pierwsze decyzje w tej rundzie...")
+            st.info("Historia jest pusta. Czekam na pierwsze decyzje.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- DANGER ZONE ---
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    with st.expander("⚠️ STREFA ZAGROŻENIA (DANGER ZONE)"):
+        st.markdown("<div class='danger-zone'>", unsafe_allow_html=True)
+        st.warning("Poniższy przycisk trwale usunie wszystkie zespoły, ich punkty oraz całą historię rozgrywki.")
+        if st.button("☢️ RESETUJ CAŁĄ GRĘ (NIEODWRACALNE)"):
+            state.update({"scenario_idx": 0, "round": 0, "teams": {}, "status": "ACTIVE", "history_log": []})
+            st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
 def team_view():
@@ -232,49 +232,45 @@ def team_view():
     team_data = state["teams"][team_name]
     m = calculate_metrics(team_name)
     
-    st.markdown(f"<div class='command-header'><div class='brand-title'>CyberBank // {team_name}</div><div>SCENARIUSZ {state['scenario_idx']+1} | RUNDA {state['round']}</div></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='command-header'><div class='brand-title'>CyberBank // {team_name}</div><div>S: {state['scenario_idx']+1} | R: {state['round']}</div></div>", unsafe_allow_html=True)
 
     if not team_data["is_active"]:
-        st.markdown("<div class='bankrupt-panel'><h1>💀 POŁĄCZENIE ZERWANE</h1><p>Bankructwo operacyjne. Twoja licencja bankowa została cofnięta przez nadzór.</p></div>", unsafe_allow_html=True)
+        st.markdown("<div class='bankrupt-panel'><h1>💀 STATUS: ELIMINACJA</h1><p>Twój bank nie spełnił wymogów kapitałowych lub utracił zaufanie rynkowe.</p></div>", unsafe_allow_html=True)
         return
 
     l, c, r = st.columns([1, 2.2, 0.9])
     
     with l:
         st.markdown("<div class='panel'>", unsafe_allow_html=True)
-        st.markdown("<span class='panel-label'>KPI JEDNOSTKI</span>", unsafe_allow_html=True)
+        st.markdown("<span class='panel-label'>WYNIKI OPERACYJNE</span>", unsafe_allow_html=True)
         render_kpi("ZAUFANIE", m[0]); render_kpi("PŁYNNOŚĆ", m[1])
         render_kpi("KAPITAŁ", m[2]); render_kpi("ZGODNOŚĆ", m[3])
-        st.markdown("</div><br><div class='panel'>", unsafe_allow_html=True)
-        st.markdown(f"<div class='log-item'><span style='color:var(--accent-yellow)'>[{datetime.datetime.now().strftime('%H:%M')}]</span> SYS: Gotowość operacyjna.</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div><br>", unsafe_allow_html=True)
+        if st.button("ODŚWIEŻ TERMINAL 🔄", use_container_width=True): st.rerun()
 
     with c:
         if state["status"] == "FINISHED":
-            st.balloons()
-            st.success("SYMULACJA ZAKOŃCZONA - TWÓJ BANK PRZETRWAŁ KRYZYS.")
+            st.success("BANK PRZETRWAŁ KRYZYS - GRATULACJE.")
         elif state["round"] == 0:
-            st.info("SYSTEM W TRYBIE NASŁUCHU. CZEKAJ NA ROZPOCZĘCIE ETAPU.")
-            if st.button("SYNCHRONIZUJ TERMINAL 🔄", use_container_width=True): st.rerun()
+            st.info("SYSTEMY W GOTOWOŚCI. CZEKAJ NA ROZKAZY Z DOWÓDZTWA.")
         elif team_data["ready"]:
-            st.warning("DECYZJE WYSŁANE. OCZEKIWANIE NA AKTUALIZACJĘ SYTUACJI RYNKOWEJ...")
-            if st.button("ODŚWIEŻ STATUS 🔄", use_container_width=True): st.rerun()
+            st.warning("DECYZJE WYSŁANE. TRWA ANALIZA RYNKOWA...")
         else:
             rd = get_round_data(state["scenario_idx"], state["round"])
             st.markdown(f"<div class='scenario-header'><h2>{rd['title']}</h2><p>{rd['desc']}</p></div>", unsafe_allow_html=True)
-            with st.form("decision_form"):
+            with st.form("team_decision"):
                 choices = {}
                 for role, q in rd["questions"].items():
                     st.write(f"**{q['label']}**")
                     choices[role] = st.radio("Strategia:", list(q["options"].keys()), key=role, label_visibility="collapsed")
-                if st.form_submit_button("AUTORYZUJ DECYZJE"):
+                if st.form_submit_button("AUTORYZUJ I WYŚLIJ"):
                     if state["scenario_idx"] not in team_data["decisions"]: team_data["decisions"][state["scenario_idx"]] = {}
                     team_data["decisions"][state["scenario_idx"]][state["round"]] = choices
                     team_data["ready"] = True
                     st.rerun()
 
     with r:
-        st.markdown(f"<div class='panel'><span class='panel-label'>ŁĄCZNOŚĆ</span><div style='text-align:center; font-size:1.5rem;'>{'🟢' if team_data['ready'] else '🟡'}</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='panel'><span class='panel-label'>ŁĄCZNOŚĆ</span><div style='text-align:center; font-size:2rem;'>{'🟢' if team_data['ready'] else '🟡'}</div></div>", unsafe_allow_html=True)
 
 def render_kpi(label, value):
     pct = int((value/150)*100)
