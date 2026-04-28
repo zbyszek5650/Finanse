@@ -1,262 +1,322 @@
 import streamlit as st
 import pandas as pd
-import base64
-import os
-import time
+import datetime
 
-# --- KONFIGURACJA STRONY ---
+# --- CONFIGURATION ---
 st.set_page_config(
-    page_title="FINANCIAL OS // COMMAND CENTER",
+    page_title="CyberBank: Global Crisis Response",
     layout="wide",
     page_icon="🏦",
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS (CYBERPUNK / MISSION CONTROL) ---
+# --- CSS (Zachowanie stylu Command Center) ---
 st.markdown("""
     <style>
-    #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
-    .stApp { background-color: #0b101a !important; color: #a0aec0; font-family: 'Segoe UI', sans-serif; padding-bottom: 50px; }
-    
-    .top-bar {
-        background-color: #060b13; border-bottom: 2px solid #1a2332;
-        padding: 15px 30px; display: flex; justify-content: space-between; align-items: center;
-        margin-top: -60px; margin-bottom: 30px; font-family: monospace;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+    :root {
+        --bg-color: #0f172a; --panel-bg: #1e293b; --border-color: #334155;
+        --text-primary: #f8fafc; --text-secondary: #94a3b8;
+        --accent-cyan: #06b6d4; --accent-red: #ef4444;
+        --accent-green: #22c55e; --accent-yellow: #f59e0b;
+        --font-sans: 'Inter', sans-serif; --font-mono: 'JetBrains Mono', monospace;
     }
-    .top-bar-title { color: #00f0ff; font-size: 22px; font-weight: 900; letter-spacing: 2px; }
-    .top-bar-alert { background-color: #3b0a0a; color: #ff4d4d; border: 1px solid #ff4d4d; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-
-    .cyber-panel { background-color: #121824; border: 1px solid #1e293b; border-radius: 6px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
-    .panel-header { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 15px; border-bottom: 1px solid #1e293b; padding-bottom: 8px; }
-
-    .kpi-row { margin-bottom: 18px; }
-    .kpi-labels { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px; text-transform: uppercase; }
-    .kpi-bg { background-color: #1e293b; height: 6px; width: 100%; border-radius: 3px; overflow: hidden; }
-    .kpi-fill { height: 100%; background-color: #00f0ff; box-shadow: 0 0 10px #00f0ff80; }
-    .kpi-fill.critical { background-color: #ff4d4d; box-shadow: 0 0 10px #ff4d4d80; }
-
-    .log-entry { font-family: monospace; font-size: 12px; margin-bottom: 15px; }
-    .log-time { color: #eab308; font-weight: bold; }
-    .log-title { color: #f8fafc; font-weight: bold; margin-top: 4px; }
-    .log-desc { color: #64748b; font-size: 11px; margin-top: 2px; border-left: 2px solid #334155; padding-left: 8px; }
-
-    .warning-box { background-color: #151a23; border: 1px solid #334155; border-left: 4px solid #00f0ff; padding: 20px; border-radius: 4px; color: #e2e8f0; font-size: 15px; line-height: 1.6; margin-bottom: 30px; }
-    
-    .status-box { text-align: center; padding: 20px; background-color: #121824; border: 1px solid #1e293b; border-radius: 6px; }
-    .stRadio label { background: #1e293b !important; border: 1px solid #334155 !important; color: #f8fafc !important; padding: 12px 16px !important; border-radius: 4px !important; margin-bottom: 8px !important; }
+    .stApp { background-color: var(--bg-color) !important; color: var(--text-primary); font-family: var(--font-sans); }
+    #MainMenu, footer, header { visibility: hidden; }
+    .command-header {
+        height: 64px; background: rgba(15, 23, 42, 0.8); border-bottom: 1px solid var(--border-color);
+        padding: 0 24px; display: flex; justify-content: space-between; align-items: center;
+        margin-top: -75px; margin-bottom: 24px; position: sticky; top: 0; z-index: 1000;
+    }
+    .brand-title { font-family: var(--font-mono); font-weight: 700; font-size: 1.2rem; color: var(--accent-cyan); text-transform: uppercase; }
+    .status-badge { background: rgba(239, 68, 68, 0.2); border: 1px solid var(--accent-red); color: var(--accent-red); padding: 4px 12px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+    .panel { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 16px; height: 100%; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+    .panel-label { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-bottom: 12px; display: block; }
+    .kpi-container { margin-bottom: 14px; }
+    .kpi-header { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 6px; }
+    .progress-bar-bg { background: var(--bg-color); height: 6px; border-radius: 3px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; transition: width 0.8s ease; }
+    .scenario-header { background: linear-gradient(135deg, var(--panel-bg) 0%, var(--bg-color) 100%); border-left: 4px solid var(--accent-cyan); border-radius: 0 6px 6px 0; padding: 20px; margin-bottom: 20px; }
+    .stButton > button { background: var(--accent-cyan) !important; color: #000 !important; font-weight: 700 !important; width: 100%; }
+    .eliminated { background: rgba(239, 68, 68, 0.1) !important; border: 1px solid var(--accent-red) !important; color: var(--accent-red) !important; padding: 20px; text-align: center; border-radius: 8px; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- BAZA SCENARIUSZY (6 FAZ X 4 ODPOWIEDZI) ---
-ALL_SCENARIOS = {
-    1: {
-        "title": "FAZA 1 - ANOMALIA W SYSTEMIE SWIFT",
-        "desc": "Systemy monitoringu wykryły serię nieautoryzowanych przelewów na kwotę 500 mln USD. Wygląda to na atak na gateway SWIFT.",
-        "questions": {
-            "IT": {"label": "ZESPÓŁ IT / CYBER:", "options": {
-                "Natychmiastowe odcięcie gatewaya (Hard Stop)": {"trst": 10, "liq": -30, "reg": 20},
-                "Zdalna analiza pakietów bez przerywania sesji": {"trst": -10, "liq": 0, "reg": -15},
-                "Izolacja zainfekowanego serwera i reset kluczy": {"trst": 5, "liq": -10, "reg": 10},
-                "Uruchomienie procedury Shadow-Audit": {"trst": -5, "liq": -5, "reg": -20}
-            }},
-            "Dir": {"label": "ZARZĄD / COMPLIANCE:", "options": {
-                "Zgłoszenie do KNF i Banków Korespondentów": {"trst": 15, "liq": 0, "reg": 30},
-                "Wstrzymanie wszystkich płatności zagranicznych": {"trst": -20, "liq": -40, "reg": 10},
-                "Próba wyciszenia incydentu do czasu diagnozy": {"trst": -30, "liq": 0, "reg": -50},
-                "Powołanie zewnętrznej firmy Incident Response": {"trst": 10, "liq": -20, "reg": 15}
-            }}
+# --- DATA: FINANCIAL SCENARIOS (4 OPTIONS) ---
+# Każdy scenariusz ma 5 rund. Każda runda ma 3 role. Każda rola ma 4 opcje.
+SCENARIOS = [
+    {
+        "name": "I: Cyfrowy Paraliż (Ransomware)",
+        "content": {
+            1: {
+                "title": "LOCKDOWN SYSTEMÓW KASOWYCH",
+                "desc": "O godzinie 8:50 systemy transakcyjne w placówkach przestają odpowiadać. Na ekranach bankomatów pojawia się logo grupy 'BlackBit'. Żądają 100 BTC.",
+                "questions": {
+                    "IT": {"label": "IT / SECURITY", "options": {
+                        "Pełna izolacja DC i odcięcie Internetu": {"tru": 0, "liq": -30, "cap": 0, "com": +10},
+                        "Próba wybiórczego blokowania ruchu": {"tru": -5, "liq": -10, "cap": 0, "com": -5},
+                        "Analiza wektora bez wyłączania systemów": {"tru": -10, "liq": 0, "cap": 0, "com": -20},
+                        "Przywracanie z backupów 'na żywo'": {"tru": 0, "liq": -15, "cap": -5, "com": 0}
+                    }},
+                    "Ops": {"label": "OPERACJE / PR", "options": {
+                        "Oficjalny komunikat o 'pracach serwisowych'": {"tru": -10, "liq": 0, "cap": 0, "com": -15},
+                        "Pełna transparentność o ataku": {"tru": +10, "liq": -5, "cap": 0, "com": +15},
+                        "Milczenie i blokada infolinii": {"tru": -30, "liq": 0, "cap": 0, "com": -20},
+                        "Przekierowanie klientów do aplikacji mobilnej": {"tru": +5, "liq": -10, "cap": 0, "com": 0}
+                    }},
+                    "Dir": {"label": "ZARZĄD / COMPLIANCE", "options": {
+                        "Zgłoszenie do KNF i prokuratury natychmiast": {"tru": +5, "liq": 0, "cap": 0, "com": +30},
+                        "Podjęcie tajnych negocjacji z hakerami": {"tru": -20, "liq": 0, "cap": -10, "com": -40},
+                        "Wynajęcie zewnętrznej firmy IR (Incident Response)": {"tru": +5, "liq": 0, "cap": -15, "com": +10},
+                        "Utworzenie rezerwy celowej na kary": {"tru": 0, "liq": 0, "cap": -20, "com": +5}
+                    }}
+                }
+            },
+            # ... (Dla zwięzłości w przykładzie definiuję 2 rundy, w pełnej wersji byłoby 5)
+            2: {
+                "title": "WYCIEK DANYCH KLIENTÓW VIP",
+                "desc": "Hakerzy publikują w sieci DarkWeb dane 100 najbogatszych klientów banku. Media zaczynają spekulować o bankructwie.",
+                "questions": {
+                    "IT": {"label": "IT / SECURITY", "options": {
+                        "Wymuszona zmiana haseł dla wszystkich": {"tru": +10, "liq": -20, "cap": 0, "com": +5},
+                        "Szyfrowanie bazy danych 'post factum'": {"tru": -5, "liq": -5, "cap": 0, "com": -10},
+                        "Odcięcie dostępu API dla partnerów": {"tru": 0, "liq": -25, "cap": -5, "com": 0},
+                        "Dezinformacja hakerów (fałszywe bazy)": {"tru": 0, "liq": 0, "cap": -10, "com": -20}
+                    }},
+                    "Ops": {"label": "OPERACJE / PR", "options": {
+                        "Osobisty kontakt z poszkodowanymi VIP": {"tru": +20, "liq": 0, "cap": -5, "com": 0},
+                        "Darmowe ubezpieczenie od kradzieży tożsamości": {"tru": +15, "liq": 0, "cap": -15, "com": +5},
+                        "Zaprzeczanie autentyczności wycieku": {"tru": -40, "liq": 0, "cap": 0, "com": -50},
+                        "Konferencja prasowa z Prezesem": {"tru": +10, "liq": 0, "cap": 0, "com": +5}
+                    }},
+                    "Dir": {"label": "ZARZĄD / COMPLIANCE", "options": {
+                        "Dobrowolne poddanie się karze regulatora": {"tru": +5, "liq": 0, "cap": -20, "com": +40},
+                        "Zrzucenie winy na dostawcę chmury": {"tru": -10, "liq": 0, "cap": 0, "com": -20},
+                        "Zwiększenie budżetu na cyberbezpieczeństwo o 200%": {"tru": +10, "liq": 0, "cap": -30, "com": +10},
+                        "Dymisja Dyrektora IT (szukanie winnego)": {"tru": -10, "liq": 0, "cap": 0, "com": -10}
+                    }}
+                }
+            }
         }
     },
-    2: {
-        "title": "FAZA 2 - WYCIEK DANYCH WEALTH MANAGEMENT",
-        "desc": "W darknecie opublikowano dane 500 najbogatszych klientów banku. Klienci zaczynają wycofywać depozyty.",
-        "options": {
-            "Pełna transparentność i infolinia 24/7": {"trst": 30, "liq": -15, "reg": 25},
-            "Cicha wymiana tokenów i kart bez ogłoszenia wycieku": {"trst": -20, "liq": -10, "reg": -40},
-            "Blokada kont VIP ze względów bezpieczeństwa": {"trst": -30, "liq": -20, "reg": 10},
-            "Kampania PR o 'rzekomych' atakach na konkurencję": {"trst": -50, "liq": 0, "reg": -60}
-        }
-    },
-    3: {
-        "title": "FAZA 3 - FLASH CRASH (ALGO-TRADING)",
-        "desc": "Wasz algorytm HFT wpadł w pętlę i wyprzedaje obligacje skarbowe po zaniżonej cenie. Rynek panikuje.",
-        "options": {
-            "Awaryjny Kill-Switch wszystkich algorytmów": {"trst": -10, "liq": -40, "reg": 20},
-            "Ręczne zlecenia kupna w celu stabilizacji kursu": {"trst": 10, "liq": -50, "reg": -10},
-            "Zgłoszenie błędu technicznego do Giełdy": {"trst": 15, "liq": 0, "reg": 20},
-            "Zignorowanie błędu, liczenie na autokorektę rynku": {"trst": -60, "liq": -30, "reg": -70}
-        }
-    },
-    4: {
-        "title": "FAZA 4 - RUN NA BANK (KRYZYS PŁYNNOŚCI)",
-        "desc": "Przed oddziałami ustawiają się kolejki. Bankomaty są pustoszone. Płynność drastycznie spada.",
-        "options": {
-            "Pożyczka płynnościowa z Banku Centralnego (LOLA)": {"trst": -10, "liq": 60, "reg": 15},
-            "Ograniczenie dziennych limitów wypłat do 1000 PLN": {"trst": -80, "liq": 40, "reg": -20},
-            "Publiczne wystąpienie Prezesa w mediach": {"trst": 25, "liq": -5, "reg": 0},
-            "Wyprzedaż aktywów trwałych banku (Fire Sale)": {"trst": 0, "liq": 35, "reg": -10}
-        }
-    },
-    5: {
-        "title": "FAZA 5 - RANSOMWARE W KSIĘDZE GŁÓWNEJ",
-        "desc": "Zaszyfrowano bazę rozliczeniową. Hakerzy żądają 10 mln EUR. Nie możecie zamknąć dnia operacyjnego.",
-        "options": {
-            "Odtwarzanie z backupów sprzed 12h": {"trst": -10, "liq": -15, "reg": 0},
-            "Przejście na rozliczenia papierowe": {"trst": -5, "liq": -30, "reg": 30},
-            "Zapłata okupu w celu odzyskania danych": {"trst": -50, "liq": -60, "reg": -100},
-            "Zawiadomienie regulatora o przerwaniu ciągłości": {"trst": -20, "liq": 0, "reg": 20}
-        }
-    },
-    6: {
-        "title": "FAZA 6 - SABOTAŻ WEWNĘTRZNY",
-        "desc": "Audyt wykrył ukrytą stratę 4 mld PLN. Szpital finansowy stoi na progu bankructwa.",
-        "options": {
-            "Wniosek o dokapitalizowanie od akcjonariuszy": {"trst": 20, "liq": 40, "reg": 10},
-            "Próba kreatywnego księgowania straty": {"trst": -40, "liq": -10, "reg": -90},
-            "Fuzja awaryjna z większym podmiotem": {"trst": -20, "liq": 50, "reg": 0},
-            "Pełna współpraca z prokuraturą i odpis strat": {"trst": -15, "liq": -60, "reg": 40}
+    {
+        "name": "II: Atak na Systemy Płatności (SWIFT)",
+        "content": {
+            1: {
+                "title": "NIEAUTORYZOWANE PRZELEWY",
+                "desc": "Systemy monitorowania wykryły pakiety transakcyjne wychodzące do banków w rajach podatkowych. Zniknęło już 50 mln USD.",
+                "questions": {
+                    "IT": {"label": "IT / SECURITY", "options": {
+                        "Natychmiastowe zatrzymanie bramy SWIFT": {"tru": -5, "liq": -50, "cap": 0, "com": +20},
+                        "Analiza ruchu bez przerywania sesji": {"tru": -10, "liq": 0, "cap": -30, "com": -20},
+                        "Wdrożenie dodatkowego MFA dla przelewów": {"tru": +5, "liq": -10, "cap": 0, "com": +10},
+                        "Próba 'hack-back' (kontratak)": {"tru": -20, "liq": 0, "cap": 0, "com": -100}
+                    }},
+                    "Ops": {"label": "OPERACJE", "options": {
+                        "Wstrzymanie wszystkich przelewów zagranicznych": {"tru": -20, "liq": -40, "cap": 0, "com": 0},
+                        "Ręczna weryfikacja każdej transakcji > 10k": {"tru": +10, "liq": -30, "cap": 0, "com": +10},
+                        "Cicha współpraca z innymi bankami": {"tru": +5, "liq": 0, "cap": 0, "com": +5},
+                        "Ignorowanie małych kwot (poniżej progu)": {"tru": -10, "liq": 0, "cap": -20, "com": -20}
+                    }},
+                    "Dir": {"label": "ZARZĄD", "options": {
+                        "Blokada wypłat z depozytów (Bank Run prevention)": {"tru": -60, "liq": +20, "cap": 0, "com": -30},
+                        "Uruchomienie linii kredytowej z Banku Centralnego": {"tru": 0, "liq": +40, "cap": -20, "com": 0},
+                        "Publiczne oskarżenie obcego wywiadu": {"tru": +5, "liq": 0, "cap": 0, "com": -10},
+                        "Pełny audyt zewnętrzny": {"tru": +10, "liq": 0, "cap": -10, "com": +20}
+                    }}
+                }
+            }
         }
     }
-}
+]
 
-# --- STAN GRY ---
-if "state" not in st.session_state:
-    st.session_state.state = {"round": 0, "teams": {}}
+# --- GAME ENGINE STATE ---
+@st.cache_resource
+def get_engine():
+    return {
+        "round": 0,
+        "scenario_idx": 0,
+        "teams": {}, # {name: {"decisions": {scen: {round: {role: choice}}}, "is_active": True}}
+        "status": "SETUP"
+    }
 
-state = st.session_state.state
+state = get_engine()
 
-def calculate_score(team_name):
-    t_data = state["teams"][team_name]
-    trst, liq, reg = 100, 100, 100
-    elim_at = None
-    for r in range(1, state["round"] + 1):
-        if str(r) in t_data["decisions"]:
-            for role, choice in t_data["decisions"][str(r)].items():
-                impact = ALL_SCENARIOS[r]["questions" if role=="IT" else "options" if role=="Dir" else "questions"][role]["options"][choice]
-                trst += impact["trst"]; liq += impact["liq"]; reg += impact["reg"]
-            if (trst < 20 or liq < 20 or reg < 20) and elim_at is None:
-                elim_at = r
-    return max(0, trst), max(0, liq), max(0, reg), elim_at
+# --- HELPERS ---
+def calculate_metrics(team_name):
+    tru, liq, cap, com = 100, 100, 100, 100
+    team = state["teams"].get(team_name, {})
+    
+    # Przelicz wszystkie scenariusze i rundy
+    for s_idx, scenario in enumerate(SCENARIOS):
+        if s_idx > state["scenario_idx"]: break
+        
+        scen_decisions = team.get("decisions", {}).get(s_idx, {})
+        for r_num, roles in scen_decisions.items():
+            for role, choice in roles.items():
+                impact = SCENARIOS[s_idx]["content"][r_num]["questions"][role]["options"][choice]
+                tru += impact.get("tru", 0)
+                liq += impact.get("liq", 0)
+                cap += impact.get("cap", 0)
+                com += impact.get("com", 0)
+    
+    return [max(0, min(150, m)) for m in [tru, liq, cap, com]]
 
-def render_cyber_kpi(label, value):
-    pct = int(min((value/150)*100, 100))
-    cls = "kpi-fill critical" if value < 40 else "kpi-fill"
-    return f"""<div class="kpi-row"><div class="kpi-labels"><span>{label}</span><span>{value} pkt</span></div><div class="kpi-bg"><div class="{cls}" style="width: {pct}%;"></div></div></div>"""
+def is_team_eliminated(metrics):
+    return any(m < 40 for m in metrics)
+
+def render_kpi(label, value):
+    pct = int((value/150)*100)
+    color = "var(--accent-red)" if value < 50 else "var(--accent-cyan)"
+    st.markdown(f"""
+        <div class="kpi-container">
+            <div class="kpi-header"><span>{label}</span><span style="color:{color}">{pct}%</span></div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:{pct}%; background:{color};"></div></div>
+        </div>
+    """, unsafe_allow_html=True)
+
+# --- VIEWS ---
+def login_view():
+    st.markdown("<div class='command-header'><div class='brand-title'>CyberBank // AUTH</div></div>", unsafe_allow_html=True)
+    _, col, _ = st.columns([1, 1.2, 1])
+    with col:
+        st.markdown("<div class='panel'>", unsafe_allow_html=True)
+        t_id = st.text_input("KRYPTONIM JEDNOSTKI (np. BANK-ALPHA):").upper()
+        if st.button("DOŁĄCZ DO OPERACJI"):
+            if t_id:
+                if t_id not in state["teams"]:
+                    state["teams"][t_id] = {"decisions": {}, "is_active": True, "ready": False, "last_scen": 0}
+                st.session_state["team_name"] = t_id
+                st.session_state["role"] = "team"
+                st.rerun()
+        
+        st.markdown("---")
+        pwd = st.text_input("ADMIN ROOT ACCESS:", type="password")
+        if st.button("LOG AS COMMANDER"):
+            if pwd == "cyber2024":
+                st.session_state["role"] = "admin"
+                st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+def admin_view():
+    st.markdown("<div class='command-header'><div class='brand-title'>CyberBank // COMMANDER</div></div>", unsafe_allow_html=True)
+    
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        st.markdown("<div class='panel'>", unsafe_allow_html=True)
+        st.write(f"**SCENARIUSZ:** {SCENARIOS[state['scenario_idx']]['name']}")
+        st.write(f"**RUNDA:** {state['round']} / 5")
+        
+        if st.button("NASTĘPNA ETAP (RUNDA/SCENARIUSZ)"):
+            if state["round"] < 2: # Tu docelowo 5
+                state["round"] += 1
+            else:
+                # Koniec scenariusza -> eliminacja słabych
+                for t_name in state["teams"]:
+                    if state["teams"][t_name]["is_active"]:
+                        m = calculate_metrics(t_name)
+                        if is_team_eliminated(m):
+                            state["teams"][t_name]["is_active"] = False
+                        else:
+                            state["teams"][t_name]["last_scen"] = state["scenario_idx"] + 1
+                
+                if state["scenario_idx"] < len(SCENARIOS) - 1:
+                    state["scenario_idx"] += 1
+                    state["round"] = 1
+                else:
+                    state["status"] = "FINISHED"
+            
+            for t in state["teams"]: state["teams"][t]["ready"] = False
+            st.rerun()
+            
+        if st.button("RESETUJ GRĘ", type="secondary"):
+            state["round"] = 0
+            state["scenario_idx"] = 0
+            state["teams"] = {}
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with c2:
+        st.markdown("<div class='panel'>", unsafe_allow_html=True)
+        st.markdown("<div class='panel-label'>RANKING LIVE</div>", unsafe_allow_html=True)
+        data = []
+        for t, d in state["teams"].items():
+            m = calculate_metrics(t)
+            status = "✅ AKTYWNY" if d["is_active"] else "❌ BANKRUT"
+            data.append({
+                "TEAM": t, 
+                "PUNKTY": sum(m), 
+                "SCENARIUSZ": f"{d['last_scen'] + 1}",
+                "STATUS": status,
+                "ZAUFANIE": m[0], "LIKWIDNOŚĆ": m[1]
+            })
+        if data:
+            df = pd.DataFrame(data).sort_values(by=["PUNKTY"], ascending=False)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+def team_view():
+    team_name = st.session_state["team_name"]
+    team_data = state["teams"][team_name]
+    metrics = calculate_metrics(team_name)
+    
+    # Header
+    st.markdown(f"<div class='command-header'><div class='brand-title'>TERMINAL: {team_name}</div><div>ETAP: {state['scenario_idx']+1}.{state['round']}</div></div>", unsafe_allow_html=True)
+
+    if not team_data["is_active"]:
+        st.markdown(f"""
+            <div class='eliminated'>
+                <h1>💀 ELIMINACJA</h1>
+                <p>Twój bank ogłosił upadłość w scenariuszu {state['scenario_idx'] + 1}.</p>
+                <p>Wskaźniki spadły poniżej progu bezpieczeństwa (40%). Nadzór finansowy odebrał licencję.</p>
+            </div>
+        """, unsafe_allow_html=True)
+        return
+
+    col_stats, col_main = st.columns([1, 3])
+    
+    with col_stats:
+        st.markdown("<div class='panel'>", unsafe_allow_html=True)
+        render_kpi("ZAUFANIE RYNKU", metrics[0])
+        render_kpi("LIKWIDNOŚĆ", metrics[1])
+        render_kpi("KAPITAŁ WŁASNY", metrics[2])
+        render_kpi("ZGODNOŚĆ (COMP)", metrics[3])
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with col_main:
+        if state["round"] == 0:
+            st.info("Oczekiwanie na rozpoczęcie symulacji przez dowództwo...")
+        elif team_data["ready"]:
+            st.success("Decyzje wysłane. Oczekiwanie na wyniki rundy...")
+        else:
+            scen = SCENARIOS[state["scenario_idx"]]
+            round_data = scen["content"][state["round"]]
+            
+            st.markdown(f"""
+                <div class='scenario-header'>
+                    <div style='font-size:0.8rem; opacity:0.7'>SCENARIUSZ {scen['name']}</div>
+                    <h2>{round_data['title']}</h2>
+                    <p>{round_data['desc']}</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            with st.form("decision_form"):
+                user_choices = {}
+                for role, q in round_data["questions"].items():
+                    st.subheader(q["label"])
+                    user_choices[role] = st.radio("Wybierz strategię:", list(q["options"].keys()), key=f"{role}_{state['round']}")
+                
+                if st.form_submit_button("ZATWIERDŹ DECYZJE"):
+                    if state["scenario_idx"] not in state["teams"][team_name]["decisions"]:
+                        state["teams"][team_name]["decisions"][state["scenario_idx"]] = {}
+                    state["teams"][team_name]["decisions"][state["scenario_idx"]][state["round"]] = user_choices
+                    state["teams"][team_name]["ready"] = True
+                    st.rerun()
 
 # --- ROUTER ---
 if "role" not in st.session_state:
-    # --- LOGOWANIE ---
-    st.markdown("<div class='top-bar'><div class='top-bar-title'>FINANCIAL OS // AUTH</div></div>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
-        st.markdown("<div class='cyber-panel'>", unsafe_allow_html=True)
-        tid = st.text_input("ID ZESPOŁU (ROOT dla admina):").strip()
-        if st.button("LOG_IN", use_container_width=True):
-            if tid.upper() == "ROOT": st.session_state.role = "admin"
-            elif tid:
-                if tid not in state["teams"]: state["teams"][tid] = {"decisions": {}, "ready": False}
-                st.session_state.role, st.session_state.team_name = "team", tid
-            st.rerun()
-
-elif st.session_state.role == "admin":
-    # --- ADMIN VIEW ---
-    st.sidebar.button("LOGOUT", on_click=lambda: st.session_state.clear())
-    st.markdown(f"<div class='top-bar'><div class='top-bar-title'>ROOT CONTROL // RUNDA {state['round']}</div></div>", unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    with c1:
-        st.write("### STEROWANIE")
-        if state["round"] < 6:
-            if st.button("NASTĘPNA RUNDA ⏩"):
-                state["round"] += 1
-                for t in state["teams"]: state["teams"][t]["ready"] = False
-                st.rerun()
-        if st.button("RESET GRY 🔄"):
-            state["round"] = 0; state["teams"] = {}; st.rerun()
-    with c2:
-        st.write("### STATUS ZESPOŁÓW")
-        for t, d in state["teams"].items():
-            _, _, _, elim = calculate_score(t)
-            st.write(f"{'🔴' if elim else '🟢'} {t}: {'ZBANKRUTOWAŁ' if elim else ('GOTOWY' if d['ready'] else 'ANALIZA')}")
-    
-    # RANKING ADMINA
-    if state["teams"]:
-        st.write("---")
-        results = []
-        for t in state["teams"]:
-            tr, li, re, elim = calculate_score(t)
-            results.append({"Drużyna": t, "Zaufanie": tr, "Płynność": li, "Zgodność": re, "Suma": (tr+li+re) if not elim else 0, "Elim": elim})
-        df = pd.DataFrame(results)
-        if "Suma" in df.columns: st.dataframe(df.sort_values(by="Suma", ascending=False), use_container_width=True)
-
-elif st.session_state.role == "team":
-    # --- TEAM VIEW ---
-    team = st.session_state.team_name
-    tr, li, re, elim = calculate_score(team)
-    st.markdown(f"<div class='top-bar'><div class='top-bar-title'>{team.upper()}</div></div>", unsafe_allow_html=True)
-    
-    col_l, col_c, col_r = st.columns([1.2, 2.8, 1.2], gap="large")
-    
-    with col_l:
-        st.markdown("<div class='cyber-panel'>", unsafe_allow_html=True)
-        st.markdown("<div class='panel-header'>METRYKI BANKOWE</div>", unsafe_allow_html=True)
-        st.markdown(render_cyber_kpi("ZAUFANIE", tr), unsafe_allow_html=True)
-        st.markdown(render_cyber_kpi("PŁYNNOŚĆ", li), unsafe_allow_html=True)
-        st.markdown(render_cyber_kpi("ZGODNOŚĆ", re), unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        st.markdown("<div class='cyber-panel'>", unsafe_allow_html=True)
-        st.markdown("<div class='panel-header'>LOGI SESJI</div>", unsafe_allow_html=True)
-        for i in range(1, state["round"] + 1):
-            st.markdown(f"<div class='log-entry'><span class='log-time'>[R{i}]</span> FAZA ZAKOŃCZONA</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with col_c:
-        if elim:
-            st.error(f"INSTYTUCJA UPADŁA W RUNDZIE {elim}")
-            st.markdown("<div class='warning-box'>Twoja licencja bankowa została cofnięta przez KNF ze względu na utratę płynności lub zaufania rynkowego.</div>", unsafe_allow_html=True)
-        elif state["round"] == 0:
-            st.info("OCZEKIWANIE NA START...")
-            time.sleep(2); st.rerun()
-        else:
-            r = state["round"]
-            scen = ALL_SCENARIOS[r]
-            st.markdown(f"### {scen['title']}")
-            st.markdown(f"<div class='warning-box'>{scen['desc']}</div>", unsafe_allow_html=True)
-            
-            if not state["teams"][team]["ready"]:
-                with st.form(f"f{r}"):
-                    choices = {}
-                    for role, q in scen.get("questions", {}).items():
-                        st.write(f"**{q['label']}**")
-                        choices[role] = st.radio("Wybierz:", list(q["options"].keys()), label_visibility="collapsed")
-                    
-                    # Obsługa scenariuszy bez ról (wszystkie 4 opcje jako jedna grupa)
-                    if "questions" not in scen:
-                        st.write("**DECYZJA ZARZĄDU:**")
-                        choices["Dir"] = st.radio("Wybierz:", list(scen["options"].keys()), label_visibility="collapsed")
-                    
-                    if st.form_submit_button("WDROŻYĆ PROCEDURĘ 📝"):
-                        state["teams"][team]["decisions"][str(r)] = choices
-                        state["teams"][team]["ready"] = True
-                        st.rerun()
-            else:
-                st.success("PROCEDURA W TOKU. CZEKAJ...")
-                time.sleep(3); st.rerun()
-
-    with col_r:
-        st.markdown("<div class='status-box'>", unsafe_allow_html=True)
-        if elim: st.write("🏁 KONIEC")
-        elif state["teams"][team]["ready"]: st.write("✅ WYŚŁANO")
-        else: st.write("⚠️ AKCJA")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-# RANKING KOŃCOWY (NA DOLE DLA WSZYSTKICH)
-if state["round"] == 6 and all(d["ready"] for d in state["teams"].values()):
-    st.markdown("---")
-    st.markdown("## 🏆 FINALNY RAPORT KOMISJI NADZORU")
-    final_data = []
-    for t_name in state["teams"]:
-        tr, li, re, elim = calculate_score(t_name)
-        final_data.append({"DRUŻYNA": t_name, "SUMA": (tr+li+re) if not elim else 0, "STATUS": "STABILNY" if not elim else f"BANKRUT (R{elim})"})
-    f_df = pd.DataFrame(final_data)
-    if not f_df.empty: st.table(f_df.sort_values(by="SUMA", ascending=False))
+    login_view()
+elif st.session_state["role"] == "admin":
+    admin_view()
+else:
+    team_view()
