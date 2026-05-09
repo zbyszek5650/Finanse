@@ -50,11 +50,60 @@ FIN_SCENARIOS = [
     {"name": "VI: Deepfake & Social Engineering", "rounds": 5}
 ]
 
+# --- NARRATIVE DESCRIPTIONS FOR EVERY ROUND ---
+SCENARIO_DESCRIPTIONS = {
+    0: { # I: Atak Ransomware
+        1: "Wykryto nietypowe, drastyczne obciążenie procesorów na stacjach roboczych w dziale obsługi klienta. Pojawiają się pierwsze zgłoszenia o samoczynnym zmianie rozszerzeń plików. Rozpoczyna się proces szyfrowania.",
+        2: "Ekrany pracowników banku zostają zablokowane czerwoną planszą. Wyświetla się komunikat z żądaniem okupu w wysokości 15 milionów dolarów w kryptowalutach w zamian za klucz deszyfrujący.",
+        3: "Złośliwe oprogramowanie (robak) usiłuje przenieść się ze stacji roboczych na główne serwery bazodanowe oraz magazyny kopii zapasowych (backup storage). Wśród personelu wybucha panika.",
+        4: "Przez opóźnienia w systemach, klienci nie mogą wykonywać przelewów ani wypłacać gotówki z bankomatów sieci. Media społecznościowe zalewa fala spekulacji. Atakujący grożą upublicznieniem danych na Dark Webie.",
+        5: "Krytyczny moment. Okno negocjacyjne dobiega końca. Bank musi podjąć decyzję o strategii odbudowy z izolowanych taśm (cold backup) i długotrwałym przestoju, lub innym sposobie rozwiązania kryzysu."
+    },
+    1: { # II: Insider Threat
+        1: "Systemy DLP (Data Loss Prevention) odnotowują masowe pobieranie danych analitycznych i portfeli klientów VIP na zewnętrzny, nieszyfrowany nośnik USB w godzinach nocnych.",
+        2: "Śledztwo wewnętrzne wykazuje, że logowania pochodzą z konta zwolnionego w ubiegłym tygodniu architekta baz danych. Nikt z IT nie zablokował jego wirtualnego profilu VPN.",
+        3: "Były pracownik kontaktuje się z zarządem anonimowym kanałem. Szantażuje bank, że przekaże bazę klientów do konkurencyjnej instytucji finansowej lub na czarny rynek, jeśli nie otrzyma gigantycznej odprawy.",
+        4: "Dziennikarz śledczy z dużego portalu kontaktuje się z rzecznikiem banku prosząc o komentarz. Twierdzi, że otrzymał „próbkę” plików bankowych wykazujących nieprawidłowości inwestycyjne zarządu.",
+        5: "Sytuacja eskaluje prawnie. Prokuratura oraz Urząd Ochrony Danych Osobowych żądają wydania nośników serwerowych jako dowodów w sprawie, co grozi zawieszeniem usług operacyjnych banku."
+    },
+    2: { # III: Supply Chain Sabotage
+        1: "Popularny dostawca oprogramowania finansowego (Zewnętrzny Vendor) wdraża rutynową, zautomatyzowaną aktualizację systemów księgowych w Waszym banku. SOC wykrywa nietypowe zapytania wychodzące z serwera aplikacji.",
+        2: "Okazuje się, że infrastruktura dostawcy została przejęta przez zaawansowaną grupę APT. Przez zaufany kanał do banku wpuszczono złośliwego backdoora, który mapuje wewnętrzną sieć.",
+        3: "Hakerzy, wykorzystując lukę, uzyskują uprawnienia do manipulacji rejestrem księgi głównej. Klienci korporacyjni zgłaszają, że salda na ich kontach nie zgadzają się z rzeczywistością.",
+        4: "Vendor oficjalnie ogłasza, że jego środowisko jest całkowicie skompromitowane i traci kontrolę. Bank traci kluczowe oprogramowanie analityczne i musi zarządzać awarią we własnym zakresie.",
+        5: "Czas na inwentaryzację szkód. Audytorzy zewnętrzni sprawdzają, czy zainfekowany kod nie dokonał ukrytych przesunięć środków na konta zagraniczne. Należy zbudować plan migracji na nową infrastrukturę."
+    },
+    3: { # IV: Phishing Masowy
+        1: "Pół tysiąca pracowników banku otrzymuje spersonalizowane maile przypominające wewnętrzne powiadomienia HR z linkiem do „Tabeli podwyżek inflacyjnych”. Znaczny procent personelu klika w link.",
+        2: "Złośliwa witryna przechwytuje dziesiątki loginów i haseł pracowników. W ciągu kilkunastu minut intruzi zaczynają logować się do wewnętrznego systemu intranetu banku.",
+        3: "Atakujący, używając skradzionych kont pracowników szczebla operacyjnego, próbują autoryzować masowe, drobnokwotowe przelewy, które uchodzą uwadze algorytmów zabezpieczających.",
+        4: "Z przejętych skrzynek e-mailowych wysyłane są sfałszowane dyspozycje do kluczowych klientów biznesowych banku (tzw. Business Email Compromise) z prośbą o zmianę numeru rachunku do rozliczeń bieżących.",
+        5: "Do banku napływają roszczenia od oburzonych klientów, którzy wykonali przelewy na konta oszustów i żądają zwrotu skradzionych środków z powodu luk w bezpieczeństwie banku."
+    },
+    4: { # V: Atak na SWIFT
+        1: "Monitor operacji zagranicznych alarmuje: w ciągu ostatniej godziny autoryzowano trzy wielomilionowe transfery środków przez system SWIFT do banków w egzotycznych rajach podatkowych, pomimo braku takich dyspozycji zlecających.",
+        2: "Złośliwy kod wewnątrz stacji obsługującej SWIFT nadpisuje logi w bazie danych Oracle, zacierając ślady wyprowadzania gotówki. Raporty dla dyrekcji generują sztuczne, fałszywie dodatnie salda.",
+        3: "Atak trwa, a środki w obcych walutach wyciekają z rezerw bankowych. Wykryto złośliwe procesy w pamięci operacyjnej, operacja jest sterowana z adresów IP w Azji Południowo-Wschodniej.",
+        4: "Krajowy regulator nadzoru finansowego zauważa potężną utratę rezerw walutowych Waszego banku. Do sztabu kryzysowego dołączają agenci międzynarodowych organów ścigania.",
+        5: "Operacje zagraniczne banku zostają formalnie zamrożone na globalnym rynku. Trwa weryfikacja logów przez niezależnych analityków oraz gorączkowe próby cofnięcia zagranicznych przelewów."
+    },
+    5: { # VI: Deepfake & Social Engineering
+        1: "Dyrektor Finansowy (CFO) odbiera pilny, bezpośredni telefon. Osoba brzmiąca identycznie jak Prezes Zarządu zleca natychmiastowy, poufny przelew na 30 mln euro w związku ze strategicznym i tajnym przejęciem spółki za granicą.",
+        2: "Przelew zostaje wykonany z ominięciem standardowych procedur („na prośbę prezesa”). Kilka godzin później prawdziwy Prezes informuje, że nie dzwonił – wykorzystano zaawansowaną technologię klonowania głosu (Audio Deepfake).",
+        3: "To dopiero początek. W serwisie YouTube i Twitter pojawia się wygenerowane przez AI wideo, na którym „Prezes banku” informuje, że bank jest niewypłacalny. Film zyskuje tysiące udostępnień w godzinę.",
+        4: "Rozpoczyna się klasyczny „Bank Run”. Spanikowani deponenci ustawiają się w gigantycznych kolejkach przed oddziałami banku, a serwery bankowości internetowej padają pod lawiną logowań i prób zerwania lokat.",
+        5: "Panika zagraża utrzymaniu płynności całego banku. Rząd oraz fundusze gwarancyjne bacznie obserwują, jak Sztab poradzi sobie z dementowaniem kłamstw, ustabilizowaniem histerii rynku i odzyskaniem utraconych milionów."
+    }
+}
+
 def get_round_data(s_idx, r_num):
+    # Pobieranie opisu dla danego scenariusza i rundy (lub opisu zapasowego)
+    scen_description = SCENARIO_DESCRIPTIONS.get(s_idx, {}).get(r_num, f"Sytuacja w scenariuszu {FIN_SCENARIOS[s_idx]['name']} rozwija się dynamicznie.")
+    
     # Stabilna struktura danych dla rund
     return {
         "title": f"FAZA {r_num}: KRYZYS W TOKU",
-        "desc": f"Sytuacja w scenariuszu {FIN_SCENARIOS[s_idx]['name']} rozwija się.",
+        "desc": scen_description,
         "questions": {
             "IT": {
                 "label": "CYBER-SECURITY", 
