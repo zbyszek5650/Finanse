@@ -5,7 +5,7 @@ import time
 
 # --- CONFIGURATION ---
 st.set_page_config(
-    page_title="CyberBank - Enterprise Crisis Control",
+    page_title="CyberBank - UTH Enterprise Crisis Control",
     layout="wide",
     page_icon="🏦",
     initial_sidebar_state="collapsed"
@@ -664,7 +664,7 @@ def login_view():
         st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         with st.expander("🔐 ROOT CONTROL"):
-            if st.text_input("ROOT KEY:", type="password") == "admin":
+            if st.text_input("ROOT KEY:", type="password") == "statystyka":
                 if st.button("ZALOGUJ DO DOWÓDZTWA"):
                     st.session_state["role"] = "admin"
                     st.rerun()
